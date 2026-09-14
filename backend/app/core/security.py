@@ -2,66 +2,43 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from pwdlib import PasswordHash
-from fastapi.security import OAuth2PasswordBearer
 
-
-SECRET_KEY = "CHANGE_THIS_TO_A_RANDOM_SECRET_KEY"
-ALGORITHM = "HS256"
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from app.core.config import settings
 
 
 password_hash = PasswordHash.recommended()
-
-
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/auth/login"
-)
 
 
 def hash_password(password: str) -> str:
     return password_hash.hash(password)
 
 
-def verify_password(
-    plain_password: str,
-    hashed_password: str
-) -> bool:
-
-    return password_hash.verify(
-        plain_password,
-        hashed_password
-    )
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
 
 
-def create_access_token(
-    data: dict,
-    expires_delta: timedelta | None = None
-):
-
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
 
     if expires_delta:
-        expire = (
-            datetime.now(timezone.utc)
-            + expires_delta
-        )
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = (
-            datetime.now(timezone.utc)
-            + timedelta(
-                minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-            )
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
-    to_encode.update({
-        "exp": expire
-    })
+    to_encode.update({"exp": expire})
 
-    encoded_jwt = jwt.encode(
+    return jwt.encode(
         to_encode,
-        SECRET_KEY,
-        algorithm=ALGORITHM
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
     )
 
-    return encoded_jwt
+
+def decode_access_token(token: str) -> dict:
+    return jwt.decode(
+        token,
+        settings.JWT_SECRET,
+        algorithms=[settings.JWT_ALGORITHM],
+    )
