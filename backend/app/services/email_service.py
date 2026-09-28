@@ -2,13 +2,17 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import httpx
+
 from app.core.config import settings
 
 
 def send_otp_email(to_email: str, otp_code: str, purpose: str = "register") -> bool:
     """
-    Sends an OTP verification email to the user via SMTP.
-    If SMTP credentials are not configured, prints the OTP safely to the console.
+    Sends an OTP verification email to the user.
+    1. If Brevo API is configured (BREVO_API_KEY and BREVO_SENDER_EMAIL), sends via Brevo REST API.
+    2. Otherwise, if SMTP is configured, sends via SMTP.
+    3. If neither is configured, prints the OTP safely to the console for development.
     """
     if purpose == "forgot_password":
         subject = f"Your BudgetBuddy Password Reset Code: {otp_code}"
@@ -69,37 +73,76 @@ Verification Code: {otp_code}
 This code will expire in 10 minutes. If you did not request this, please ignore this email.
 """
 
-    # Check if SMTP is configured
-    if not settings.SMTP_HOST or not settings.SMTP_USER:
-        print(f"[BudgetBuddy Auth] SMTP not configured. OTP for {to_email} ({purpose}): {otp_code}")
-        return False
+    # --- 1. Brevo REST API Mode ---
+    if settings.BREVO_API_KEY and settings.BREVO_SENDER_EMAIL:
+        headers = {
+            "api-key": settings.BREVO_API_KEY.strip(),
+            "accept": "application/json",
+            "content-type": "application/json",
+        }
+        payload = {
+            "sender": {
+                "name": settings.BREVO_SENDER_NAME or "BudgetBuddy",
+                "email": settings.BREVO_SENDER_EMAIL.strip(),
+            },
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_content,
+            "textContent": plain_content,
+        }
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                response = client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers=headers,
+                    json=payload,
+                )
+                if response.status_code in (200, 201):
+                    print(f"[BudgetBuddy Auth] Email sent via Brevo to {to_email}")
+                    return True
+                else:
+                    print(
+                        f"[BudgetBuddy Auth] Brevo API error ({response.status_code}): {response.text}. Fallback OTP: {otp_code}"
+                    )
+                    return False
+        except Exception as exc:
+            print(
+                f"[BudgetBuddy Auth] Exception calling Brevo API: {exc}. Fallback OTP: {otp_code}"
+            )
+            return False
 
-    sender_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
-    sender_name = settings.SMTP_FROM_NAME or "BudgetBuddy"
+    # --- 2. Optional SMTP Mode ---
+    if settings.SMTP_HOST and settings.SMTP_USER:
+        sender_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
+        sender_name = settings.SMTP_FROM_NAME or "BudgetBuddy"
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"{sender_name} <{sender_email}>"
-    msg["To"] = to_email
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{sender_name} <{sender_email}>"
+        msg["To"] = to_email
 
-    msg.attach(MIMEText(plain_content, "plain"))
-    msg.attach(MIMEText(html_content, "html"))
+        msg.attach(MIMEText(plain_content, "plain"))
+        msg.attach(MIMEText(html_content, "html"))
 
-    try:
-        if settings.SMTP_SSL:
-            server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-        else:
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-            if settings.SMTP_TLS:
-                server.starttls()
+        try:
+            if settings.SMTP_SSL:
+                server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+            else:
+                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+                if settings.SMTP_TLS:
+                    server.starttls()
 
-        if settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            if settings.SMTP_PASSWORD:
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
 
-        server.sendmail(sender_email, [to_email], msg.as_string())
-        server.quit()
-        print(f"[BudgetBuddy Auth] Email sent successfully to {to_email}")
-        return True
-    except Exception as exc:
-        print(f"[BudgetBuddy Auth] Failed to send email via SMTP: {exc}. Fallback OTP: {otp_code}")
-        return False
+            server.sendmail(sender_email, [to_email], msg.as_string())
+            server.quit()
+            print(f"[BudgetBuddy Auth] Email sent successfully via SMTP to {to_email}")
+            return True
+        except Exception as exc:
+            print(f"[BudgetBuddy Auth] Failed to send email via SMTP: {exc}. Fallback OTP: {otp_code}")
+            return False
+
+    # --- 3. Development Fallback ---
+    print(f"[BudgetBuddy Auth] Brevo/Email not configured. OTP for {to_email} ({purpose}): {otp_code}")
+    return False

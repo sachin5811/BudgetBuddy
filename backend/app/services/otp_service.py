@@ -44,8 +44,11 @@ def create_and_send_otp(db: Session, email: str, purpose: str = "register") -> d
 
     sent = send_otp_email(clean_email, otp_code, purpose=purpose)
 
-    # In development or if SMTP is not configured, return dev_code for testing
-    dev_code = otp_code if (not settings.SMTP_HOST or not settings.SMTP_USER) else None
+    # In development or if Brevo/email is not configured, return dev_code for testing
+    is_configured = bool(settings.BREVO_API_KEY and settings.BREVO_SENDER_EMAIL) or bool(
+        settings.SMTP_HOST and settings.SMTP_USER
+    )
+    dev_code = otp_code if not is_configured else None
 
     return {
         "success": True,

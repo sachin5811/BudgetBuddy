@@ -18,7 +18,12 @@ class Settings:
     ADMIN_PASSWORD: str = os.environ.get("ADMIN_PASSWORD", "admin123")
     CORS_ORIGINS: str = os.environ.get("CORS_ORIGINS", "*")
 
-    # SMTP Email Configuration
+    # Brevo (formerly Sendinblue) REST API Configuration
+    BREVO_API_KEY: str = os.environ.get("BREVO_API_KEY", "")
+    BREVO_SENDER_EMAIL: str = os.environ.get("BREVO_SENDER_EMAIL", "")
+    BREVO_SENDER_NAME: str = os.environ.get("BREVO_SENDER_NAME", "BudgetBuddy")
+
+    # Optional SMTP Email Configuration (as backup)
     SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
     SMTP_PORT: int = int(os.environ.get("SMTP_PORT", "587"))
     SMTP_USER: str = os.environ.get("SMTP_USER", "")
