@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin
-from app.core.config import settings
 from app.database.database import get_db
 from app.models.expense import Expense
 from app.models.savings_goal import SavingsGoal
@@ -59,15 +58,6 @@ def update_role(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    if user.role == "admin" and data.role != "admin":
-        admin_count = db.query(User).filter(User.role == "admin").count()
-        if admin_count <= 1 and user.email.lower() != settings.ADMIN_EMAIL.lower():
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot demote the last administrator. Promote another user to admin first.",
-            )
-
     user.role = data.role
     db.commit()
     db.refresh(user)

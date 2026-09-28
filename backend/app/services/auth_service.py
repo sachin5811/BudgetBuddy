@@ -60,13 +60,6 @@ def seed_admin(db: Session):
             name="Admin",
             role="admin",
         )
-    else:
-        updated = False
-        if admin.role != "admin":
-            admin.role = "admin"
-            updated = True
-        if not verify_password(settings.ADMIN_PASSWORD, admin.hashed_password):
-            admin.hashed_password = hash_password(settings.ADMIN_PASSWORD)
-            updated = True
-        if updated:
-            db.commit()
+    elif not verify_password(settings.ADMIN_PASSWORD, admin.hashed_password):
+        admin.hashed_password = hash_password(settings.ADMIN_PASSWORD)
+        db.commit()

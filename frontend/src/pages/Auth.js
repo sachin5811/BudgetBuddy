@@ -164,13 +164,6 @@ export default function Auth({ mode }) {
               {isLogin ? "Create an account" : "Log in"}
             </Link>
           </p>
-
-          {isLogin && (
-            <div className="mt-6 text-center text-xs text-slate-400 bg-white border border-slate-200 rounded-xl px-4 py-3">
-              Demo admin — <span className="font-mono">admin@budgetbuddy.com</span> /{" "}
-              <span className="font-mono">admin123</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
