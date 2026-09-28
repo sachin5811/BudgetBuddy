@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import decode_access_token
 from app.database.database import get_db
 from app.models.user import User
@@ -42,6 +43,6 @@ def get_current_user(
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "admin":
+    if user.role != "admin" and user.email.lower() != settings.ADMIN_EMAIL.lower():
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
