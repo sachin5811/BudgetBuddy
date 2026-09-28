@@ -21,12 +21,14 @@ def create_user(
     password: str,
     name: str = "Student",
     role: str = "student",
+    is_verified: bool = False,
 ):
     user = User(
         name=name or "Student",
         email=email,
         hashed_password=hash_password(password),
         role=role,
+        is_verified=is_verified,
     )
     db.add(user)
     db.commit()
@@ -59,7 +61,15 @@ def seed_admin(db: Session):
             password=settings.ADMIN_PASSWORD,
             name="Admin",
             role="admin",
+            is_verified=True,
         )
-    elif not verify_password(settings.ADMIN_PASSWORD, admin.hashed_password):
-        admin.hashed_password = hash_password(settings.ADMIN_PASSWORD)
-        db.commit()
+    else:
+        changed = False
+        if not verify_password(settings.ADMIN_PASSWORD, admin.hashed_password):
+            admin.hashed_password = hash_password(settings.ADMIN_PASSWORD)
+            changed = True
+        if not getattr(admin, "is_verified", False):
+            admin.is_verified = True
+            changed = True
+        if changed:
+            db.commit()

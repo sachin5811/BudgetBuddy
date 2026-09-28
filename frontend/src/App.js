@@ -27,6 +27,10 @@ function App() {
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
           <Route
+            path="/forgot-password"
+            element={<Auth mode="forgot-password" />}
+          />
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>

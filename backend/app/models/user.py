@@ -16,4 +16,5 @@ class User(Base):
     monthly_income = Column(Float, nullable=False, default=0.0)
     currency = Column(String, nullable=False, default="INR")
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

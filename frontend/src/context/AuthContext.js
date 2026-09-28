@@ -34,6 +34,46 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const sendRegisterOTP = async (name, email, password) => {
+    const { data } = await API.post("/auth/register/send-otp", {
+      name,
+      email,
+      password,
+    });
+    return data;
+  };
+
+  const verifyRegisterOTP = async (name, email, password, otp_code) => {
+    const { data } = await API.post("/auth/register/verify-otp", {
+      name,
+      email,
+      password,
+      otp_code,
+    });
+    localStorage.setItem("bb_token", data.access_token);
+    setUser(data.user);
+    return data.user;
+  };
+
+  const sendForgotPasswordOTP = async (email) => {
+    const { data } = await API.post("/auth/forgot-password/send-otp", { email });
+    return data;
+  };
+
+  const verifyForgotPasswordOTP = async (email, otp_code, new_password) => {
+    const { data } = await API.post("/auth/forgot-password/verify-otp", {
+      email,
+      otp_code,
+      new_password,
+    });
+    return data;
+  };
+
+  const resendOTP = async (email, purpose) => {
+    const { data } = await API.post("/auth/resend-otp", { email, purpose });
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem("bb_token");
     setUser(false);
@@ -47,7 +87,19 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, setUser, login, register, logout, refreshUser }}
+      value={{
+        user,
+        setUser,
+        login,
+        register,
+        sendRegisterOTP,
+        verifyRegisterOTP,
+        sendForgotPasswordOTP,
+        verifyForgotPasswordOTP,
+        resendOTP,
+        logout,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

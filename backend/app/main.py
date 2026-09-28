@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.core.config import settings
 from app.database.database import Base, SessionLocal, engine
 
 # Import all models so tables are registered before create_all
 from app.models.user import User  # noqa: F401
+from app.models.otp import OTPVerification  # noqa: F401
 from app.models.income import Income  # noqa: F401
 from app.models.expense import Expense  # noqa: F401
 from app.models.budget import Budget  # noqa: F401
@@ -26,6 +28,22 @@ from app.services.auth_service import seed_admin
 
 
 Base.metadata.create_all(bind=engine)
+
+
+def init_db():
+    # Ensure is_verified column exists on users table (for existing databases)
+    inspector = inspect(engine)
+    if "users" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("users")]
+        if "is_verified" not in columns:
+            with engine.connect() as conn:
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 1")
+                )
+                conn.commit()
+
+
+init_db()
 
 
 app = FastAPI(

@@ -15,6 +15,34 @@ class UserLogin(BaseModel):
     password: str
 
 
+class SendRegisterOTPRequest(BaseModel):
+    name: Optional[str] = "Student"
+    email: EmailStr
+    password: str
+
+
+class VerifyRegisterOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    password: str
+    name: Optional[str] = "Student"
+
+
+class ForgotPasswordSendOTPRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResetRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    new_password: str
+
+
+class ResendOTPRequest(BaseModel):
+    email: EmailStr
+    purpose: str = "register"  # "register" | "forgot_password"
+
+
 class UserResponse(BaseModel):
     id: int
     name: str
@@ -23,6 +51,7 @@ class UserResponse(BaseModel):
     monthly_income: float
     currency: str
     is_active: bool
+    is_verified: bool = True
     created_at: Optional[datetime] = None
 
     class Config:
