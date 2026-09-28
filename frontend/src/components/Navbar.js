@@ -44,7 +44,9 @@ export default function Navbar() {
   }, [location.pathname]);
 
   const nav = [...NAV];
-  if (user?.role === "admin") {
+  const isAdmin =
+    user?.role === "admin" || user?.email?.toLowerCase() === "admin@budgetbuddy.com";
+  if (isAdmin) {
     nav.push({ to: "/admin", label: "Admin", icon: Shield });
   }
 

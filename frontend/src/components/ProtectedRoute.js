@@ -19,7 +19,10 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && user.role !== "admin") {
+  const isAdmin =
+    user.role === "admin" || user.email?.toLowerCase() === "admin@budgetbuddy.com";
+
+  if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
