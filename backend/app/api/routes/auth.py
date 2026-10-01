@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -5,8 +7,10 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.security import hash_password
 from app.database.database import get_db
+from app.models.otp import OTPVerification
 from app.models.user import User
 from app.schemas.auth import (
+    CheckRegisterOTPRequest,
     ForgotPasswordResetRequest,
     ForgotPasswordSendOTPRequest,
     ResendOTPRequest,
@@ -38,11 +42,6 @@ def register_send_otp(data: SendRegisterOTPRequest, db: Session = Depends(get_db
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email address already exists. Please log in.",
         )
-    if len(data.password) < 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters long.",
-        )
 
     res = create_and_send_otp(db, email, purpose="register")
     return {
@@ -52,9 +51,39 @@ def register_send_otp(data: SendRegisterOTPRequest, db: Session = Depends(get_db
     }
 
 
+@router.post("/register/check-code")
+def register_check_code(data: CheckRegisterOTPRequest, db: Session = Depends(get_db)):
+    email = data.email.lower().strip()
+    clean_code = data.otp_code.strip()
+    now = datetime.now(timezone.utc)
+    record = (
+        db.query(OTPVerification)
+        .filter(
+            OTPVerification.email == email,
+            OTPVerification.purpose == "register",
+            OTPVerification.is_used == False,
+            OTPVerification.expires_at >= now,
+        )
+        .order_by(OTPVerification.id.desc())
+        .first()
+    )
+    if not record or record.otp_code != clean_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code. Please check your code or request a new one.",
+        )
+    return {"valid": True, "message": "Verification code is valid."}
+
+
 @router.post("/register/verify-otp", response_model=Token)
 def register_verify_otp(data: VerifyRegisterOTPRequest, db: Session = Depends(get_db)):
     email = data.email.lower().strip()
+    if len(data.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long.",
+        )
+
     if not verify_otp(db, email, data.otp_code, purpose="register"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

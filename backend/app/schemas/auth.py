@@ -18,7 +18,12 @@ class UserLogin(BaseModel):
 class SendRegisterOTPRequest(BaseModel):
     name: Optional[str] = "Student"
     email: EmailStr
-    password: str
+    password: Optional[str] = None
+
+
+class CheckRegisterOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
 
 
 class VerifyRegisterOTPRequest(BaseModel):
